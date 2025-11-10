@@ -1,16 +1,17 @@
 package main
 
 import (
-	"fmt"
-	"strings"
-	"os"
 	"bufio"
-	"sort"
-	"net/http"
-	"io"
 	"encoding/json"
+	"fmt"
+	"io"
+	"net/http"
+	"os"
+	"pokedexcli/internal/pokecache"
+	"sort"
+	"strings"
+	"time"
 )
-
 type cliCommand struct {
 	name        string
 	description string
@@ -20,6 +21,7 @@ type cliCommand struct {
 type Config struct {
 	Next		string
 	Previous	string
+	Cache 		*pokecache.Cache
 }
 
 type locationAreaList struct {
@@ -60,6 +62,7 @@ func NewRegistry() map[string]cliCommand {
 }
 
 func main() {
+	cfg.Cache = pokecache.NewCache(5 * time.Second)
 	startREPL(cfg)
 }
 
@@ -121,23 +124,30 @@ func commandMap(cfg *Config) error {
 	if cfg.Next != "" {
 		url = cfg.Next
 	}
-	res, err := http.Get(url)
-	if err != nil {
-		return err
-	}
-	defer res.Body.Close()
 
-	b, err := io.ReadAll(res.Body)
-	if err != nil {
-		return err
-	}
+	var b []byte
+	if cached, ok := cfg.Cache.Get(url); ok {
+		b = cached
+	} else {
+		res, err := http.Get(url)
+		if err != nil {
+			return err
+		}
+		defer res.Body.Close()
 
+		body, err := io.ReadAll(res.Body)
+		if err != nil {
+			return err
+		}
+		cfg.Cache.Add(url, body)
+		b = body
+	}
+	
 	var out locationAreaList
-
 	if err := json.Unmarshal(b, &out); err != nil {
 		return err
 	}
-
+	
 	for _, r := range out.Results {
 		fmt.Println(r.Name)
 	}
@@ -164,19 +174,26 @@ func commandMapb(cfg *Config) error {
 		fmt.Println("You are on the first page.")
 		return nil
 	}
-	res, err := http.Get(url)
-	if err != nil {
-		return err
-	}
-	defer res.Body.Close()
 
-	b, err := io.ReadAll(res.Body)
-	if err != nil {
-		return err
-	}
+	var b []byte 
+	if cached, ok := cfg.Cache.Get(url); ok {
+		b = cached
+	} else {
+		res, err := http.Get(url)
+		if err != nil {
+			return err
+		}
+		defer res.Body.Close()
 
-	var out locationAreaList
+		body, err := io.ReadAll(res.Body)
+		if err != nil {
+			return err
+		}
+		cfg.Cache.Add(url, body)
+		b = body
+	}
 	
+	var out locationAreaList
 	if err := json.Unmarshal(b, &out); err != nil {
 		return err
 	}
