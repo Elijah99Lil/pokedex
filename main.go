@@ -12,6 +12,7 @@ import (
 	"sort"
 	"strings"
 	"time"
+	"math/rand"
 )
 
 type cliCommand struct {
@@ -24,6 +25,7 @@ type Config struct {
 	Next		string
 	Previous	string
 	Cache 		*pokecache.Cache
+	Caught		map[string]pokeapi.Pokemon
 }
 
 type locationAreaList struct {
@@ -65,11 +67,21 @@ func NewRegistry() map[string]cliCommand {
 			description:	"	Virtually explores an area and finds Pokemon in that area",
 			callback:		commandExplore,
 		},
+		"catch": {
+			name:			"catch",
+			description:	"		Attempt to catch a Pokemon!",
+			callback:		commandCatch,
+		},
 	}
 }
 
+
 func main() {
-	cfg.Cache = pokecache.NewCache(5 * time.Second)
+	rand.Seed(time.Now().UnixNano())
+	cfg := &Config{
+		Cache:  pokecache.NewCache(5 * time.Second),
+		Caught: make(map[string]pokeapi.Pokemon),
+}
 	startREPL(cfg)
 }
 
@@ -232,8 +244,43 @@ func commandExplore(cfg *Config, args []string) error {
 	areaName := args[0]
 	fmt.Printf("Exploring %s...\n", areaName)
 
-	if err := pokeapi.GetPokemonData(cfg.Cache, areaName); err != nil {
+	if err := pokeapi.GetLocationArea(cfg.Cache, areaName); err != nil {
         return err
     }
     return nil
+}
+
+func commandCatch(cfg *Config, args []string) error {
+	if len(args) < 1 {
+	fmt.Println("usage: catch <pokemon>")
+	return nil
+	}
+	name := args[0]
+	var poke pokeapi.Pokemon
+	poke, err := pokeapi.GetPokemonData(cfg.Cache, name)
+	if err != nil {
+		return err
+	}
+	fmt.Printf("Throwing a Pokeball at %s...\n", name)
+
+	max := 100
+	threshold := 60 - poke.BaseExperience/5
+	roll := rand.Intn(max)
+	success := roll < threshold
+
+	if threshold < 5 {
+		threshold = 5
+	}
+
+	if threshold > 90 {
+		threshold = 90
+	}
+
+	if success {
+		fmt.Printf("%s was caught!\n", name)
+		cfg.Caught[name] = poke
+	} else {
+		fmt.Printf("%s escaped!\n", name)
+	}
+	return nil
 }
