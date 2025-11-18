@@ -72,12 +72,16 @@ func NewRegistry() map[string]cliCommand {
 			description:	"		Attempt to catch a Pokemon!",
 			callback:		commandCatch,
 		},
+		"inspect": {
+			name:			"inspect",
+			description:	"		Check the details of a Pokemon",
+			callback:		commandInspect,
+		},
 	}
 }
 
 
 func main() {
-	rand.Seed(time.Now().UnixNano())
 	cfg := &Config{
 		Cache:  pokecache.NewCache(5 * time.Second),
 		Caught: make(map[string]pokeapi.Pokemon),
@@ -252,7 +256,7 @@ func commandExplore(cfg *Config, args []string) error {
 
 func commandCatch(cfg *Config, args []string) error {
 	if len(args) < 1 {
-	fmt.Println("usage: catch <pokemon>")
+	fmt.Println("usage: catch <pokemon-name>")
 	return nil
 	}
 	name := args[0]
@@ -262,6 +266,11 @@ func commandCatch(cfg *Config, args []string) error {
 		return err
 	}
 	fmt.Printf("Throwing a Pokeball at %s...\n", name)
+	time.Sleep(2 * time.Second)
+	fmt.Println("...")
+	time.Sleep(2 * time.Second)
+	fmt.Println("...")
+	time.Sleep(2 * time.Second)
 
 	max := 100
 	threshold := 60 - poke.BaseExperience/5
@@ -279,8 +288,39 @@ func commandCatch(cfg *Config, args []string) error {
 	if success {
 		fmt.Printf("%s was caught!\n", name)
 		cfg.Caught[name] = poke
+		time.Sleep(2 * time.Second)
+		fmt.Printf("You may now inspect it with the inspect command.\n")
 	} else {
 		fmt.Printf("%s escaped!\n", name)
+	}
+	return nil
+}
+
+func commandInspect(cfg *Config, args []string) error {
+	if len(args) < 1 {
+		fmt.Println("usage: inspect <pokemon-name>")
+		return nil
+	}
+	name := args[0]
+	
+	poke, ok := cfg.Caught[name] 
+	if !ok {
+		fmt.Println("you have not caught that pokemon")
+		return nil
+	} 
+	
+	fmt.Printf("Name: %v\n", poke.Name)
+	fmt.Printf("Height: %v\n", poke.Height)
+	fmt.Printf("Weight: %v\n", poke.Weight)
+
+	fmt.Print("Stats:\n")
+	for _, p := range poke.Stats {
+		fmt.Printf("  -%s: %v\n", p.Stat.Name, p.BaseStat)
+	}
+	
+	fmt.Print("Types:\n")
+	for _, p := range poke.Types {
+		fmt.Printf("  - %s\n", p.Type.Name)
 	}
 	return nil
 }
