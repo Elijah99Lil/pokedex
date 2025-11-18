@@ -36,8 +36,6 @@ type locationAreaList struct {
 
 var commands map[string]cliCommand
 
-var cfg = &Config{}
-
 const baseLocationAreaURL = "https://pokeapi.co/api/v2/location-area?limit=20"
 
 func NewRegistry() map[string]cliCommand {
@@ -74,8 +72,13 @@ func NewRegistry() map[string]cliCommand {
 		},
 		"inspect": {
 			name:			"inspect",
-			description:	"		Check the details of a Pokemon",
+			description:	"	Check the details of a Pokemon",
 			callback:		commandInspect,
+		},
+		"pokedex": {
+			name:			"pokedex",
+			description:	"	Check your Pokedex for a list of caught Pokemon",
+			callback:		commandPokedex,
 		},
 	}
 }
@@ -321,6 +324,14 @@ func commandInspect(cfg *Config, args []string) error {
 	fmt.Print("Types:\n")
 	for _, p := range poke.Types {
 		fmt.Printf("  - %s\n", p.Type.Name)
+	}
+	return nil
+}
+
+func commandPokedex(cfg *Config, _[]string) error {
+	fmt.Println("Your Pokedex:")
+	for _, p := range cfg.Caught {
+		fmt.Printf("  - %s\n", p.Name)
 	}
 	return nil
 }

@@ -108,10 +108,11 @@ func GetLocationArea(cache Cacher, name string) error {
 	if err := json.Unmarshal(b, &out); err != nil {
 		return err
 	}
-
+	
 	for _, r := range out.PokemonEncounters{
 		fmt.Println(r.Pokemon.Name)
 	}
+
 	return nil
 }
 
